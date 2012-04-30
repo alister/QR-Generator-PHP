@@ -596,7 +596,51 @@ class QR
             $i ++;
             $ii ++;
         }
-        return $base_image;
+
+        //  Resize the QR Code
+        imagecopyresized(
+            $output_image, 
+            $base_image, 
+            0, 0, 
+            0, 0, 
+            $qrcode_image_size, 
+            $qrcode_image_size, 
+            $this->getMib(), $this->getMib());
+
+        //  Clean up after ourselves!
+        imagedestroy($base_image);
+
+        return $output_image;
+    }
+
+    function outputImage($output_image, $qrcode_image_type, $qrcode_download, $qrcode_image_size)
+    {
+        //  Set the correct content header
+        Header("Content-type: image/".$qrcode_image_type);
+
+        //  If the download parameter has been set, the 
+        //  content disposition must be changed to prompt the 
+        //  browser to download the image rather than display it
+        //  & download
+        if ($qrcode_download) {
+            if ($qrcode_image_type == "jpeg") {
+                $fileExtension = "jpg";
+            } else if ($qrcode_image_type == "gif") {
+                $fileExtension = "gif";
+            } else {
+                $fileExtension = "png";
+            }
+            header('Content-Disposition: attachment; filename="'.$qrcode_download.'.'.$fileExtension.'"');  
+        }
+
+        //  Send the image to stdout
+        if ($qrcode_image_type == "jpeg") { 
+            ImageJpeg($output_image);
+        } else if ($qrcode_image_type == "gif") {
+            imagegif($output_image);
+        } else {
+            ImagePng($output_image);
+        }
     }
 
 }

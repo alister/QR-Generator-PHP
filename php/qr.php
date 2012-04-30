@@ -65,6 +65,8 @@
 */
 
 if ('cli' == PHP_SAPI) {
+    error_reporting(-1);
+
 	// fake some demo code
 	$_GET['d'] ='hello this is a simple QR with a bit of text. XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 	$_GET['e'] = 'Q';
@@ -92,10 +94,10 @@ if ($qrcode_raw) {
 }
 
 //	Experimental Parameters
-$qrcode_structureappend_n=@$_GET["n"];
-$qrcode_structureappend_m=@$_GET["m"];
-$qrcode_structureappend_parity=@$_GET["p"];
-$qrcode_structureappend_originaldata=@$_GET["o"];
+$qrcode_structureappend_n            = @$_GET["n"];
+$qrcode_structureappend_m            = @$_GET["m"];
+$qrcode_structureappend_parity       = @$_GET["p"];
+$qrcode_structureappend_originaldata = @$_GET["o"];
 
 
 //	Set the Image Type
@@ -138,9 +140,6 @@ if (strlen($qrcode_data_string) <= 0) {
 	exit;
 }
 
-//	Create the image
-$output_image = imagecreate($qrcode_image_size, $qrcode_image_size);
-
 //	Create the QR Code
 require_once 'QR-Generator/QR.php';
 $qr = new QR;
@@ -154,37 +153,9 @@ $base_image = $qr->createQR(
     $qrcode_structureappend_parity,
     $qrcode_structureappend_originaldata
 );
-$mib = $qr->getMib();
 
-//	Set the correct content header
-Header("Content-type: image/".$qrcode_image_type);
+$qr->outputImage($base_image, $qrcode_image_type, $qrcode_download, $qrcode_image_size);
 
-//	Resize the QR Code 
-imagecopyresized($output_image, $base_image, 0, 0, 0, 0, $qrcode_image_size, $qrcode_image_size, $mib, $mib);
-
-//	If the download parameter has been set, the content disposition must be changed to prompt the browser to download the image rather than display it
-//	&download
-if ($qrcode_download) {
-	if ($qrcode_image_type == "jpeg") {
-		$fileExtension = "jpg";
-	} else if ($qrcode_image_type == "gif") {
-		$fileExtension = "gif";
-	} else {
-		$fileExtension = "png";
-	}
-	header('Content-Disposition: attachment; filename="'.$qrcode_download.'.'.$fileExtension.'"');	
-}
-
-//	Send the image to the browser
-if ($qrcode_image_type == "jpeg") { 
-	ImageJpeg($output_image);
-} else if ($qrcode_image_type == "gif") {
-	imagegif($output_image);
-} else {
-	ImagePng($output_image);
-}
-
-//	All done!
-//	Clean up after ourselves!
-imagedestroy($output_image);
+//  All done!
+//  Clean up after ourselves!
 imagedestroy($base_image);
