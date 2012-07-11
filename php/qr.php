@@ -6,11 +6,11 @@
 #	From: http://www.venus.dti.ne.jp/~swe/program/qr_img0.50i.tar.gz
 #	http://www.swetake.com/qr/
 #	Licenced as "revised BSD License" by the original author
-#		
+#
 #		Subsequent Changes
 #	Copyright (c) 2012, Terence Eden
 #	All rights reserved.
-#	
+#
 #	Redistribution and use in source and binary forms, with or without
 #	modification, are permitted provided that the following conditions are met:
 #		* Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 #		* Neither the name of the software nor the
 #		  names of its contributors may be used to endorse or promote products
 #		  derived from this software without specific prior written permission.
-#	
+#
 #	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 #	ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 #	WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,9 +32,9 @@
 #	ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 #	(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 #	SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#		
 #
-#  This program outputs a QRcode as either a PNG, JPEG, or GIF. 
+#
+#  This program outputs a QRcode as either a PNG, JPEG, or GIF.
 #
 #  Supports QRcode version 1-40.
 #
@@ -67,15 +67,15 @@
 if ('cli' == PHP_SAPI) {
     error_reporting(-1);
 
-	// fake some demo code
-	$_GET['d'] ='hello this is a simple QR with a bit of text. XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
-	$_GET['e'] = 'Q';
-	$_GET['t'] = 'J';
-	$_GET['size'] = 500;
-	$_GET['download'] = 'test';
-	$_GET["s"] = null;
-	$_GET["v"] = null;
-	$_GET["raw"] = null;
+    // fake some demo code
+    $_GET['d'] ='hello this is a simple QR with a bit of text. XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+    $_GET['e'] = 'Q';
+    $_GET['t'] = 'J';
+    $_GET['size'] = 500;
+    $_GET['download'] = 'test';
+    $_GET["s"] = null;
+    $_GET["v"] = null;
+    $_GET["raw"] = null;
 }
 
 //	Get the parameters
@@ -88,9 +88,9 @@ $qrcode_image_size   = $_GET["size"];
 $qrcode_download     = $_GET["download"];
 
 if ($qrcode_raw) {
-	$qrcode_data_string  = rawurldecode($_GET["d"]);
+    $qrcode_data_string  = rawurldecode($_GET["d"]);
 } else {
-	$qrcode_data_string  = $_GET["d"];
+    $qrcode_data_string  = $_GET["d"];
 }
 
 //	Experimental Parameters
@@ -99,32 +99,31 @@ $qrcode_structureappend_m            = @$_GET["m"];
 $qrcode_structureappend_parity       = @$_GET["p"];
 $qrcode_structureappend_originaldata = @$_GET["o"];
 
-
 //	Set the Image Type
 //	&t=
 if ($qrcode_image_type == "j") {
-	$qrcode_image_type = "jpeg";
-} else if ($qrcode_image_type == "g") {
-	$qrcode_image_type = "gif";
+    $qrcode_image_type = "jpeg";
+} elseif ($qrcode_image_type == "g") {
+    $qrcode_image_type = "gif";
 } else {
-	$qrcode_image_type = "png";
+    $qrcode_image_type = "png";
 }
 
 //	Set the Module Size (this is *not* the same as the Image Size)
 //	&s=
 if ($qrcode_module_size > 0) {
 } else {
-	if ($qrcode_image_type == "jpeg") {
-		$qrcode_module_size = 8;
-	} else {
-		$qrcode_module_size = 4;
-	}
+    if ($qrcode_image_type == "jpeg") {
+        $qrcode_module_size = 8;
+    } else {
+        $qrcode_module_size = 4;
+    }
 }
 
 //	Set the Image Size (QR codes are square - so the height and width are the same)
 //	&size=
-if ($qrcode_image_size == null)	{
-	$qrcode_image_size = 400;
+if ($qrcode_image_size == null) {
+    $qrcode_image_size = 400;
 }
 
 //	Maximum Image Size
@@ -136,20 +135,20 @@ if ($qrcode_image_size > 1480) {
 
 //	If no data has been supplied
 if (strlen($qrcode_data_string) <= 0) {
-	trigger_error("QRcode : No data supplied.", E_USER_ERROR);
-	exit;
+    trigger_error("QRcode : No data supplied.", E_USER_ERROR);
+    exit;
 }
 
 //	Create the QR Code
 require_once 'QR-Generator/QR.php';
 $qr = new QR;
 $base_image = $qr->createQR(
-	$qrcode_data_string, 
-    $qrcode_error_correct, 
-    $qrcode_version, 
-    $qrcode_image_size, 
-    $qrcode_structureappend_n, 
-    $qrcode_structureappend_m, 
+    $qrcode_data_string,
+    $qrcode_error_correct,
+    $qrcode_version,
+    $qrcode_image_size,
+    $qrcode_structureappend_n,
+    $qrcode_structureappend_m,
     $qrcode_structureappend_parity,
     $qrcode_structureappend_originaldata
 );

@@ -15,8 +15,8 @@
  */
 
 /**
- * This program outputs a QRcode as either a PNG, JPEG, or GIF. 
- * 
+ * This program outputs a QRcode as either a PNG, JPEG, or GIF.
+ *
  * Supports QRcode version 1-40.
  *
  * Requires PHP4.1 and gd 1.6 or higher.
@@ -25,7 +25,7 @@
 class QR
 {
     // This program supports an upper limit of version 40.
-    // Version 40 has 177 rows and 177 columns, and can encode up 
+    // Version 40 has 177 rows and 177 columns, and can encode up
     // to 4,296 alphanumeric characters
     // See http://code.google.com/apis/chart/infographics/docs/qr_codes.html
     const VERSION_MAX = 40;
@@ -43,12 +43,12 @@ class QR
 
     //	Here be dragons!
     //	Do not edit this code unless you are sure you understand what you are doing
-    function createQR($qrcode_data_string, 
-        $qrcode_error_correct, 
-        $qrcode_version, 
-        $qrcode_image_size, 
-        $qrcode_structureappend_n, 
-        $qrcode_structureappend_m, 
+    public function createQR($qrcode_data_string,
+        $qrcode_error_correct,
+        $qrcode_version,
+        $qrcode_image_size,
+        $qrcode_structureappend_n,
+        $qrcode_structureappend_m,
         $qrcode_structureappend_parity,
         $qrcode_structureappend_originaldata
     ) {
@@ -58,14 +58,13 @@ class QR
 
         //	Create the QR Code
         $data_length = strlen($qrcode_data_string);
-        
+
         $data_counter = 0;
         if ($qrcode_structureappend_n > 1
             && $qrcode_structureappend_n <= 16
             && $qrcode_structureappend_m > 0
             && $qrcode_structureappend_m <= 16
         ) {
-
             $data_value[0] = 3;
             $data_bits[0]  = 4;
 
@@ -75,9 +74,8 @@ class QR
             $data_value[2] = $qrcode_structureappend_n-1;
             $data_bits[2]  = 4;
 
-
             $originaldata_length = strlen($qrcode_structureappend_originaldata);
-            
+
             if ($originaldata_length > 1) {
                 $qrcode_structureappend_parity = 0;
                 $i = 0;
@@ -130,7 +128,6 @@ class QR
                 $data_value[$data_counter]  = $data_length;
                 $data_bits[$data_counter]   = 9;  /* #version 1-9 */
                 $codeword_num_counter_value = $data_counter;
-
 
                 $alphanumeric_character_hash = array(
                     "0"=>0,"1"=>1,"2"=>2,"3"=>3,"4"=>4,
@@ -242,7 +239,7 @@ class QR
             /* #--- auto version select */
             $i              = 1+ 40*$ec;    // @todo params
             $j              = $i+39;
-            $qrcode_version = 1; 
+            $qrcode_version = 1;
             while ($i <= $j) {
                 if (($max_data_bits_array[$i]) >= $total_data_bits+$codeword_num_plus[$qrcode_version]) {
                     $max_data_bits = $max_data_bits_array[$i];
@@ -339,7 +336,7 @@ class QR
 
             $flag = 1;
             while ($flag) {
-                if ($remaining_bits>$buffer_bits) {  
+                if ($remaining_bits>$buffer_bits) {
                     $codewords[$codewords_counter] = ((@$codewords[$codewords_counter]<<$buffer_bits) | $buffer);
                     $remaining_bits -=$buffer_bits;
                     $flag = 0;
@@ -351,7 +348,7 @@ class QR
                         $flag = 0;
                     } else {
                         $buffer = ($buffer & ((1 << $buffer_bits)-1) );
-                        $flag   = 1;   
+                        $flag   = 1;
                     }
 
                     $codewords_counter++;
@@ -456,7 +453,7 @@ class QR
             while ($j >= 1) {
                 $codeword_bits_number=($i << 3) +  $j;
 
-                $matrix_content[ $matrix_x_array[$codeword_bits_number] ][ $matrix_y_array[$codeword_bits_number] ]=((255*($codeword_i & 1)) ^ $mask_array[$codeword_bits_number] ); 
+                $matrix_content[ $matrix_x_array[$codeword_bits_number] ][ $matrix_y_array[$codeword_bits_number] ]=((255*($codeword_i & 1)) ^ $mask_array[$codeword_bits_number] );
 
                 $codeword_i = $codeword_i >> 1;
                 $j--;
@@ -488,7 +485,7 @@ class QR
             $k++;
         }
         $i=0;
-        $all_matrix=$max_modules_1side * $max_modules_1side; 
+        $all_matrix=$max_modules_1side * $max_modules_1side;
         while ($i < 8) {
             $demerit_n1 = 0;
             $ptn_temp   = array();
@@ -529,7 +526,7 @@ class QR
                 $demerit_n2 += (strlen($str_temp)-1);
             }
             $demerit_n2*=3;
-          
+
             $ptn_temp = array();
 
             preg_match_all($n1_search, $hor, $ptn_temp);
@@ -588,7 +585,7 @@ class QR
             $jj = 0;
             while ($j < $mxe) {
                 if ($matrix_content[$ii][$jj] & $mask_content) {
-                    ImageSetPixel($base_image, $i, $j, $col[1]); 
+                    ImageSetPixel($base_image, $i, $j, $col[1]);
                 }
                 $j ++;
                 $jj ++;
@@ -599,12 +596,12 @@ class QR
 
         //  Resize the QR Code
         imagecopyresized(
-            $output_image, 
-            $base_image, 
-            0, 0, 
-            0, 0, 
-            $qrcode_image_size, 
-            $qrcode_image_size, 
+            $output_image,
+            $base_image,
+            0, 0,
+            0, 0,
+            $qrcode_image_size,
+            $qrcode_image_size,
             $this->getMib(), $this->getMib());
 
         //  Clean up after ourselves!
@@ -613,30 +610,30 @@ class QR
         return $output_image;
     }
 
-    function outputImage($output_image, $qrcode_image_type, $qrcode_download, $qrcode_image_size)
+    public function outputImage($output_image, $qrcode_image_type, $qrcode_download, $qrcode_image_size)
     {
         //  Set the correct content header
         Header("Content-type: image/".$qrcode_image_type);
 
-        //  If the download parameter has been set, the 
-        //  content disposition must be changed to prompt the 
+        //  If the download parameter has been set, the
+        //  content disposition must be changed to prompt the
         //  browser to download the image rather than display it
         //  & download
         if ($qrcode_download) {
             if ($qrcode_image_type == "jpeg") {
                 $fileExtension = "jpg";
-            } else if ($qrcode_image_type == "gif") {
+            } elseif ($qrcode_image_type == "gif") {
                 $fileExtension = "gif";
             } else {
                 $fileExtension = "png";
             }
-            header('Content-Disposition: attachment; filename="'.$qrcode_download.'.'.$fileExtension.'"');  
+            header('Content-Disposition: attachment; filename="'.$qrcode_download.'.'.$fileExtension.'"');
         }
 
         //  Send the image to stdout
-        if ($qrcode_image_type == "jpeg") { 
+        if ($qrcode_image_type == "jpeg") {
             ImageJpeg($output_image);
-        } else if ($qrcode_image_type == "gif") {
+        } elseif ($qrcode_image_type == "gif") {
             imagegif($output_image);
         } else {
             ImagePng($output_image);
