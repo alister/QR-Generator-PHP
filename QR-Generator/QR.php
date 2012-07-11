@@ -41,20 +41,40 @@ class QR
         $this->mib = $mib;
     }
 
+    private $max_codewords_array = array(
+        0,26,44,70,100,134,172,196,242,
+        292,346,404,466,532,581,655,733,815,901,991,1085,1156,
+        1258,1364,1474,1588,1706,1828,1921,2051,2185,2323,2465,
+        2611,2761,2876,3034,3196,3362,3532,3706);
+
+    private $matrix_remain_bit = array(
+        0,0,7,7,7,7,7,0,0,0,0,0,0,0,3,3,3,3,3,3,3,
+        4,4,4,4,4,4,4,3,3,3,3,3,3,3,0,0,0,0,0,0);
+
+    private $format_information_array = array("101010000010010","101000100100101",
+        "101111001111100","101101101001011","100010111111001","100000011001110",
+        "100111110010111","100101010100000","111011111000100","111001011110011",
+        "111110110101010","111100010011101","110011000101111","110001100011000",
+        "110110001000001","110100101110110","001011010001001","001001110111110",
+        "001110011100111","001100111010000","000011101100010","000001001010101",
+        "000110100001100","000100000111011","011010101011111","011000001101000",
+        "011111100110001","011101000000110","010010010110100","010000110000011",
+        "010111011011010","010101111101101");
+
+
     //	Here be dragons!
     //	Do not edit this code unless you are sure you understand what you are doing
     public function createQR($qrcode_data_string,
-        $qrcode_error_correct,
-        $qrcode_version,
         $qrcode_image_size,
         $qrcode_structureappend_n,
         $qrcode_structureappend_m,
         $qrcode_structureappend_parity,
         $qrcode_structureappend_originaldata
     ) {
+
         //  Path to the data and image files
-        $path       = dirname(__FILE__)."/data";  //  You must set path to data files.
-        $image_path = dirname(__FILE__)."/image"; //  You must set path to QRcode frame images.
+        $path             = dirname(__FILE__)."/data";  //  You must set path to data files.
+        $this->image_path = dirname(__FILE__)."/image"; //  You must set path to QRcode frame images.
 
         //	Create the QR Code
         $data_length = strlen($qrcode_data_string);
@@ -194,113 +214,27 @@ class QR
             $i++;
         }
 
-        //	Error Correction
-        $ecc_character_hash = array (
-            "l"=>"1",
-            "m"=>"0",
-            "q"=>"3",
-            "h"=>"2"
-        );
+        $ec                   = $this->getErrorCorrection();
+        $this->qrcode_version = $this->getQrCodeVersion($codeword_num_plus, $total_data_bits);
 
-        $ec = @$ecc_character_hash[$qrcode_error_correct];
+        $total_data_bits                        += $codeword_num_plus[$this->qrcode_version];
+        $data_bits[$codeword_num_counter_value] += $codeword_num_plus[$this->qrcode_version];
 
-        if (!$ec) {
-            $ec = 0;
-        }
+        $max_codewords     = $this->max_codewords_array[$this->qrcode_version];
+        $max_modules_1side = 17+ ($this->qrcode_version <<2);
 
-        $max_data_bits_array=array(
-            0,128,224,352,512,688,864,992,1232,1456,1728,
-            2032,2320,2672,2920,3320,3624,4056,4504,5016,5352,
-            5712,6256,6880,7312,8000,8496,9024,9544,10136,10984,
-            11640,12328,13048,13800,14496,15312,15936,16816,17728,18672,
+        $filename = $path."/qrv".$this->qrcode_version."_".$ec.".dat";
+        $d = $this->readECCDatafile($filename, $max_codewords);
+        list($matrix_x_array, $matrix_y_array, $mask_array, $rs_block_order, $rs_ecc_codewords, $byte_num) = $d;
 
-            152,272,440,640,864,1088,1248,1552,1856,2192,
-            2592,2960,3424,3688,4184,4712,5176,5768,6360,6888,
-            7456,8048,8752,9392,10208,10960,11744,12248,13048,13880,
-            14744,15640,16568,17528,18448,19472,20528,21616,22496,23648,
+        $max_data_codewords = ($this->max_data_bits >>3);
 
-            72,128,208,288,368,480,528,688,800,976,
-            1120,1264,1440,1576,1784,2024,2264,2504,2728,3080,
-            3248,3536,3712,4112,4304,4768,5024,5288,5608,5960,
-            6344,6760,7208,7688,7888,8432,8768,9136,9776,10208,
-
-            104,176,272,384,496,608,704,880,1056,1232,
-            1440,1648,1952,2088,2360,2600,2936,3176,3560,3880,
-            4096,4544,4912,5312,5744,6032,6464,6968,7288,7880,
-            8264,8920,9368,9848,10288,10832,11408,12016,12656,13328
-        );
-
-        // Which version of the QR code do we need to generate?
-        // If the user hasn't specified a version, autogenerate one.
-        if (! is_numeric($qrcode_version)) {
-            $qrcode_version = 0;
-        }
-        if (!$qrcode_version) {
-            /* #--- auto version select */
-            $i              = 1+ 40*$ec;    // @todo params
-            $j              = $i+39;
-            $qrcode_version = 1;
-            while ($i <= $j) {
-                if (($max_data_bits_array[$i]) >= $total_data_bits+$codeword_num_plus[$qrcode_version]) {
-                    $max_data_bits = $max_data_bits_array[$i];
-                    break;
-                }
-                $i ++;
-                $qrcode_version ++;
-            }
-        } else {
-            $max_data_bits = $max_data_bits_array[$qrcode_version+ 40*$ec];
-        }
-        if ($qrcode_version > self::VERSION_MAX) {
-            trigger_error("QRcode : too large version.", E_USER_ERROR);
-        }
-
-        $total_data_bits                        += $codeword_num_plus[$qrcode_version];
-        $data_bits[$codeword_num_counter_value] += $codeword_num_plus[$qrcode_version];
-
-        $max_codewords_array=array(
-            0,26,44,70,100,134,172,196,242,
-            292,346,404,466,532,581,655,733,815,901,991,1085,1156,
-            1258,1364,1474,1588,1706,1828,1921,2051,2185,2323,2465,
-            2611,2761,2876,3034,3196,3362,3532,3706);
-
-        $max_codewords     = $max_codewords_array[$qrcode_version];
-        $max_modules_1side = 17+ ($qrcode_version <<2);
-
-        $matrix_remain_bit=array(
-            0,0,7,7,7,7,7,0,0,0,0,0,0,0,3,3,3,3,3,3,3,
-            4,4,4,4,4,4,4,3,3,3,3,3,3,3,0,0,0,0,0,0);
-
-        /* ---- read version ECC data file */
-        $byte_num = $matrix_remain_bit[$qrcode_version] +($max_codewords << 3);
-        $filename = $path."/qrv".$qrcode_version."_".$ec.".dat";
-        $fp1      = fopen($filename, "rb");
-        $matx     = fread($fp1, $byte_num);
-        $maty     = fread($fp1, $byte_num);
-        $masks    = fread($fp1, $byte_num);
-        $fi_x     = fread($fp1, 15);
-        $fi_y     = fread($fp1, 15);
-
-        $rs_ecc_codewords = ord(fread($fp1, 1));
-        $rso              = fread($fp1, 128);
-        fclose($fp1);
-
-        $matrix_x_array = unpack("C*", $matx);
-        $matrix_y_array = unpack("C*", $maty);
-        $mask_array     = unpack("C*", $masks);
-
-        $rs_block_order = unpack("C*", $rso);
-
-        $format_information_x2 = unpack("C*", $fi_x);
-        $format_information_y2 = unpack("C*", $fi_y);
-
-        $format_information_x1 = array(0,1,2,3,4,5,7,8,8,8,8,8,8,8,8);
-        $format_information_y1 = array(8,8,8,8,8,8,8,8,7,5,4,3,2,1,0);
-
-        $max_data_codewords = ($max_data_bits >>3);
-
+        // read the rsc ECC codewords file
         $filename = $path."/rsc".$rs_ecc_codewords.".dat";
         $fp0 = fopen($filename, "rb");
+        if ($fp0 === false) {
+            throw new Exception("failed to open $filename");
+        }
         $i   = 0;
         while ($i < 256) {
             $rs_cal_table_array[$i] = fread($fp0, $rs_ecc_codewords);
@@ -308,16 +242,18 @@ class QR
         }
         fclose($fp0);
 
+
+
         /*  --- set terminator */
-        if ($total_data_bits<=$max_data_bits-4) {
-            $data_value[$data_counter]=0;
-            $data_bits[$data_counter]=4;
+        if ($total_data_bits<=$this->max_data_bits-4) {
+            $data_value[$data_counter] = 0;
+            $data_bits[$data_counter]  = 4;
         } else {
-            if ($total_data_bits<$max_data_bits) {
+            if ($total_data_bits<$this->max_data_bits) {
                 $data_value[$data_counter] = 0;
-                $data_bits[$data_counter]  = $max_data_bits-$total_data_bits;
+                $data_bits[$data_counter]  = $this->max_data_bits-$total_data_bits;
             } else {
-                if ($total_data_bits>$max_data_bits) {
+                if ($total_data_bits>$this->max_data_bits) {
                     trigger_error("QRcode : Overflow error", E_USER_ERROR);
                     exit;
                 }
@@ -461,7 +397,7 @@ class QR
             $i++;
         }
 
-        $matrix_remain=$matrix_remain_bit[$qrcode_version];
+        $matrix_remain=$this->matrix_remain_bit[$this->qrcode_version];
         while ($matrix_remain) {
             $remain_bit_temp = $matrix_remain + ( $max_codewords <<3);
 
@@ -545,34 +481,32 @@ class QR
         }
 
         $mask_content = 1 << $mask_number;
-
-        // --- format information
-
-        $format_information_value = (($ec << 3) | $mask_number);
-        $format_information_array = array("101010000010010","101000100100101",
-            "101111001111100","101101101001011","100010111111001","100000011001110",
-            "100111110010111","100101010100000","111011111000100","111001011110011",
-            "111110110101010","111100010011101","110011000101111","110001100011000",
-            "110110001000001","110100101110110","001011010001001","001001110111110",
-            "001110011100111","001100111010000","000011101100010","000001001010101",
-            "000110100001100","000100000111011","011010101011111","011000001101000",
-            "011111100110001","011101000000110","010010010110100","010000110000011",
-            "010111011011010","010101111101101");
-        $i=0;
-        while ($i < 15) {
-            $content = substr($format_information_array[$format_information_value], $i, 1);
-
-            $matrix_content[$format_information_x1[$i]][$format_information_y1[$i]]     = $content * 255;
-            $matrix_content[$format_information_x2[$i+1]][$format_information_y2[$i+1]] = $content * 255;
-            $i ++;
-        }
-
+        $matrix_content = $this->fillMatrix($mask_number, $matrix_content);
         $this->setMib($max_modules_1side+8);    // Output!
 
+        return $this->generateFinalImage($max_modules_1side, $qrcode_image_size, $mask_content, $matrix_content);
+    }
+
+    function fillMatrix($mask_number, $matrix_content)
+    {
+        // --- format information
+        $format_information_value = (($this->getErrorCorrection() << 3) | $mask_number);
+        $i = 0;
+        while ($i < 15) {
+            $content = substr($this->format_information_array[$format_information_value], $i, 1);
+            $matrix_content[$this->format_information_x1[$i  ]][$this->format_information_y1[$i  ]] = $content * 255;
+            $matrix_content[$this->format_information_x2[$i+1]][$this->format_information_y2[$i+1]] = $content * 255;
+            $i ++;
+        }
+        return $matrix_content;
+    }
+
+    private function generateFinalImage($max_modules_1side, $qrcode_image_size, $mask_content, $matrix_content)
+    {
         $output_image = ImageCreate($qrcode_image_size, $qrcode_image_size);
 
-        $image_path = $image_path."/qrv".$qrcode_version.".png";
-        $base_image = ImageCreateFromPNG($image_path);
+        $this->image_path = $this->image_path."/qrv".$this->qrcode_version.".png";
+        $base_image = ImageCreateFromPNG($this->image_path);
 
         $col[1] = ImageColorAllocate($base_image, 0, 0, 0);
         $col[0] = ImageColorAllocate($base_image, 255, 255, 255);
@@ -606,7 +540,6 @@ class QR
 
         //  Clean up after ourselves!
         imagedestroy($base_image);
-
         return $output_image;
     }
 
@@ -638,6 +571,125 @@ class QR
         } else {
             ImagePng($output_image);
         }
+    }
+
+
+    public $errorCorrectionChoice = 0;
+    //  Error Correction options
+    public $ecc_character_hash = array (
+        'l' => '1',
+        'm' => '0',
+        'q' => '3',
+        'h' => '2',
+    );
+
+    public function errorCorrection($ec)
+    {
+        if (!isset($this->ecc_character_hash[$ec])) {
+            $v = join(',', array_keys($this->ecc_character_hash));
+            throw new Exception("Bad ec choice, '$ec' [{$v}]");
+        }
+        $this->errorCorrectionChoice = $ec;
+        return $this;
+    }
+
+    public function getErrorCorrection()
+    {
+        if (!isset($this->ecc_character_hash[$this->errorCorrectionChoice])) {
+            return $this->ecc_character_hash[$this->errorCorrectionChoice];
+        }
+        return 0;
+    }
+
+    private $max_data_bits_array = array(
+        0,128,224,352,512,688,864,992,1232,1456,1728,
+        2032,2320,2672,2920,3320,3624,4056,4504,5016,5352,
+        5712,6256,6880,7312,8000,8496,9024,9544,10136,10984,
+        11640,12328,13048,13800,14496,15312,15936,16816,17728,18672,
+
+        152,272,440,640,864,1088,1248,1552,1856,2192,
+        2592,2960,3424,3688,4184,4712,5176,5768,6360,6888,
+        7456,8048,8752,9392,10208,10960,11744,12248,13048,13880,
+        14744,15640,16568,17528,18448,19472,20528,21616,22496,23648,
+
+        72,128,208,288,368,480,528,688,800,976,
+        1120,1264,1440,1576,1784,2024,2264,2504,2728,3080,
+        3248,3536,3712,4112,4304,4768,5024,5288,5608,5960,
+        6344,6760,7208,7688,7888,8432,8768,9136,9776,10208,
+
+        104,176,272,384,496,608,704,880,1056,1232,
+        1440,1648,1952,2088,2360,2600,2936,3176,3560,3880,
+        4096,4544,4912,5312,5744,6032,6464,6968,7288,7880,
+        8264,8920,9368,9848,10288,10832,11408,12016,12656,13328
+    );
+
+    public $qrcode_version = 0;
+    public function qrCodeVersion($qrVersion)
+    {
+        if (! is_numeric($qrVersion)) {
+            $this->qrcode_version = 0;
+        }
+        if ($this->qrcode_version > self::VERSION_MAX) {
+            trigger_error("QRcode : too large version.", E_USER_ERROR);
+            //@todo exception
+        }
+        $this->qrcode_version = $qrVersion;
+        return $this;
+    }
+    public function getQrCodeVersion($codeword_num_plus, $total_data_bits)
+    {
+        // Which version of the QR code do we need to generate?
+        // If the user hasn't specified a version, autogenerate one.
+
+        if (! $this->qrcode_version) {
+            /* #--- auto version select */
+            $i = 1  + 40 * $this->getErrorCorrection();    // @todo params
+            $j = $i + 39;
+
+            $this->qrcode_version = 1;
+            while ($i <= $j) {
+                if (($this->max_data_bits_array[$i]) >= $total_data_bits+$codeword_num_plus[$this->qrcode_version]) {
+                    $this->max_data_bits = $this->max_data_bits_array[$i];
+                    break;
+                }
+                $i ++;
+                $this->qrcode_version ++;
+            }
+        } else {
+            $this->max_data_bits = $this->max_data_bits_array[$this->qrcode_version+ 40 * $this->getErrorCorrection()];
+        }
+
+        return $this->qrcode_version;
+    }
+
+    private function readECCDatafile($filename, $max_codewords)
+    {
+        /* ---- read version ECC data file */
+        $byte_num = $this->matrix_remain_bit[$this->qrcode_version] +($max_codewords << 3);
+        $fp1      = fopen($filename, "rb");
+        $matx     = fread($fp1, $byte_num);
+        $maty     = fread($fp1, $byte_num);
+        $masks    = fread($fp1, $byte_num);
+        $fi_x     = fread($fp1, 15);
+        $fi_y     = fread($fp1, 15);
+
+        $rs_ecc_codewords = ord(fread($fp1, 1));
+        $rso              = fread($fp1, 128);
+        fclose($fp1);
+
+        $matrix_x_array = unpack("C*", $matx);
+        $matrix_y_array = unpack("C*", $maty);
+        $mask_array     = unpack("C*", $masks);
+
+        $rs_block_order = unpack("C*", $rso);
+
+        $this->format_information_x2 = unpack("C*", $fi_x);
+        $this->format_information_y2 = unpack("C*", $fi_y);
+
+        $this->format_information_x1 = array(0,1,2,3,4,5,7,8,8,8,8,8,8,8,8);
+        $this->format_information_y1 = array(8,8,8,8,8,8,8,8,7,5,4,3,2,1,0);
+
+        return array($matrix_x_array, $matrix_y_array, $mask_array, $rs_block_order, $rs_ecc_codewords, $byte_num);
     }
 
 }

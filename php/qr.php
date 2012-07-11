@@ -140,19 +140,19 @@ if (strlen($qrcode_data_string) <= 0) {
 }
 
 //	Create the QR Code
-require_once 'QR-Generator/QR.php';
+require_once '../QR-Generator/QR.php';
 $qr = new QR;
+
+$qr->errorCorrection($qrcode_error_correct)
+   ->qrCodeVersion($qrcode_version);
 $base_image = $qr->createQR(
     $qrcode_data_string,
-    $qrcode_error_correct,
-    $qrcode_version,
     $qrcode_image_size,
     $qrcode_structureappend_n,
     $qrcode_structureappend_m,
     $qrcode_structureappend_parity,
     $qrcode_structureappend_originaldata
 );
-
 $qr->outputImage($base_image, $qrcode_image_type, $qrcode_download, $qrcode_image_size);
 
 //  All done!
